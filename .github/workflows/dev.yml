@@ -1,6 +1,13 @@
-on: [push, pull_request]
-
-name: CI
+name: Push Request Testing
+on:
+  push:
+    branches:
+      - '*'         # matches every branch
+      - '*/*'       # matches every branch containing a single '/'
+      - '!master'   # excludes master
+  pull_request:
+    branches:
+      - master
 
 jobs:
   check:
