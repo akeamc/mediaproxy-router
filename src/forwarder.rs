@@ -1,5 +1,5 @@
-use actix_web::HttpResponse;
 use actix_web::error::ErrorInternalServerError;
+use actix_web::HttpResponse;
 use mediaproxy_common::query::Query;
 use url::Url;
 

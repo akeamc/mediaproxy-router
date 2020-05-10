@@ -1,9 +1,9 @@
+use actix_web::error::ErrorBadRequest;
 use actix_web::{middleware, web, App, HttpResponse, HttpServer};
 use clap::Arg;
 use mediaproxy_common::query::Query;
-use url::Url;
 use serde::Deserialize;
-use actix_web::error::ErrorBadRequest;
+use url::Url;
 
 mod forwarder;
 
@@ -13,13 +13,16 @@ async fn router(query: web::Json<Query>, url: web::Data<Url>) -> actix_web::Resu
 
 #[derive(Deserialize)]
 pub struct FingerprintRequest {
-   fingerprint: String
+    fingerprint: String,
 }
 
-async fn fingerprint(web::Query(info): web::Query<FingerprintRequest>, url: web::Data<Url>) -> actix_web::Result<HttpResponse> {
+async fn fingerprint(
+    web::Query(info): web::Query<FingerprintRequest>,
+    url: web::Data<Url>,
+) -> actix_web::Result<HttpResponse> {
     match Query::from_fingerprint(info.fingerprint) {
         Ok(query) => forwarder::forward(query, url.get_ref().clone()),
-        Err(error) => Err(ErrorBadRequest(error))
+        Err(error) => Err(ErrorBadRequest(error)),
     }
 }
 
@@ -55,7 +58,11 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(4096))
             .data(forward_url.clone())
-            .service(web::resource("/").route(web::post().to(router)).route(web::get().to(fingerprint)))
+            .service(
+                web::resource("/")
+                    .route(web::post().to(router))
+                    .route(web::get().to(fingerprint)),
+            )
     })
     .bind(listen_addr)?
     .run()
