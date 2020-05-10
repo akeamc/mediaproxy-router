@@ -3,10 +3,11 @@ use clap::Arg;
 use mediaproxy_common::query::Query;
 use url::Url;
 use serde::Deserialize;
+use actix_web::error::ErrorBadRequest;
 
 mod forwarder;
 
-fn router(query: web::Json<Query>, url: web::Data<Url>) -> HttpResponse {
+async fn router(query: web::Json<Query>, url: web::Data<Url>) -> actix_web::Result<HttpResponse> {
     forwarder::forward(query.into_inner(), url.get_ref().clone())
 }
 
@@ -15,10 +16,10 @@ pub struct FingerprintRequest {
    fingerprint: String
 }
 
-fn fingerprint(web::Query(info): web::Query<FingerprintRequest>, url: web::Data<Url>) -> HttpResponse {
+async fn fingerprint(web::Query(info): web::Query<FingerprintRequest>, url: web::Data<Url>) -> actix_web::Result<HttpResponse> {
     match Query::from_fingerprint(info.fingerprint) {
         Ok(query) => forwarder::forward(query, url.get_ref().clone()),
-        Err(error) => actix_web::error::ErrorBadRequest(error).error_response()
+        Err(error) => Err(ErrorBadRequest(error))
     }
 }
 
