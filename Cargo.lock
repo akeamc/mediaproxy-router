@@ -980,9 +980,9 @@ checksum = "7ffc5c5338469d4d3ea17d269fa8ea3512ad247247c30bd2df69e68309ed0a08"
 
 [[package]]
 name = "mediaproxy-common"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "394fe19dd148fafc9073a88a4082fe843107f676665167927674b82778fe239a"
+checksum = "e322542af02d1b51701bfa64657a016341060c928fdf230adadd128492448012"
 dependencies = [
  "base64 0.12.0",
  "custom_error",
