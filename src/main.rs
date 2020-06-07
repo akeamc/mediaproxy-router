@@ -1,14 +1,16 @@
 use actix_web::error::ErrorBadRequest;
 use actix_web::{middleware, web, App, HttpResponse, HttpServer};
 use clap::Arg;
+use http::Uri;
 use mediaproxy_common::query::Query;
 use serde::Deserialize;
-use url::Url;
 
 mod forwarder;
 
-async fn router(query: web::Json<Query>, url: web::Data<Url>) -> actix_web::Result<HttpResponse> {
-    forwarder::forward(query.into_inner(), url.get_ref().clone())
+async fn router(query: web::Json<Query>, uri: web::Data<Uri>) -> actix_web::Result<HttpResponse> {
+    forwarder::forward(query.into_inner(), uri.get_ref().clone())
+        .await?
+        .await
 }
 
 #[derive(Deserialize)]
@@ -18,10 +20,14 @@ pub struct FingerprintRequest {
 
 async fn fingerprint(
     web::Query(info): web::Query<FingerprintRequest>,
-    url: web::Data<Url>,
+    uri: web::Data<Uri>,
 ) -> actix_web::Result<HttpResponse> {
     match Query::from_fingerprint(info.fingerprint) {
-        Ok(query) => forwarder::forward(query, url.get_ref().clone()),
+        Ok(query) => {
+            forwarder::forward(query, uri.get_ref().clone())
+                .await?
+                .await
+        }
         Err(error) => Err(ErrorBadRequest(error)),
     }
 }
@@ -48,7 +54,12 @@ async fn main() -> std::io::Result<()> {
 
     let listen_addr = matches.value_of("listen_addr").unwrap();
     let forward_addr = matches.value_of("forward_addr").unwrap();
-    let forward_url = Url::parse(&format!("http://{}", forward_addr)).unwrap();
+    let forward_uri = Uri::builder()
+        .scheme("http")
+        .authority(forward_addr)
+        .path_and_query("")
+        .build()
+        .unwrap();
 
     println!("Binding {}", listen_addr);
     println!("Forwarding requests to {}", forward_addr);
@@ -57,7 +68,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(4096))
-            .data(forward_url.clone())
+            .data(forward_uri.clone())
             .service(
                 web::resource("/")
                     .route(web::post().to(router))

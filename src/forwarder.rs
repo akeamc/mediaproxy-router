@@ -1,25 +1,38 @@
-use actix_web::error::ErrorInternalServerError;
+use actix_web::client::Client;
 use actix_web::HttpResponse;
+use http::Uri;
 use mediaproxy_common::query::Query;
-use url::Url;
 
-pub fn forward(query: Query, forward_url: Url) -> actix_web::Result<HttpResponse> {
+fn replace_path_and_query(original: &Uri, new_path_and_query: String) -> Result<Uri, http::Error> {
+    Uri::builder()
+        .scheme(original.scheme().map(|a| a.as_str()).unwrap_or(""))
+        .authority(original.authority().map(|a| a.as_str()).unwrap_or(""))
+        .path_and_query(new_path_and_query.as_str())
+        .build()
+}
+
+pub async fn forward(query: Query, forward_uri: Uri) -> Result<HttpResponse, actix_web::Error> {
     let fingerprint = query.to_fingerprint();
 
-    let mut new_url = forward_url;
-    new_url.set_path(&fingerprint);
+    let new_uri = replace_path_and_query(&forward_uri, format!("/{}", fingerprint)).unwrap();
 
-    let res = match reqwest::blocking::get(new_url) {
-        Ok(res) => res,
-        Err(error) => return Err(ErrorInternalServerError(error)),
-    };
+    let res = Client::default().get(new_uri).send().await?;
 
     let mut client_resp = HttpResponse::build(res.status());
 
-    let bytes = match res.bytes() {
-        Ok(bytes) => bytes,
-        Err(error) => return Err(ErrorInternalServerError(error)),
-    };
+    let stream = actix_web::body::BodyStream::new(res);
 
-    Ok(client_resp.body(bytes))
+    Ok(client_resp.body(stream))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_replace_path() {
+        let original_uri = "https://github.com/ThePicoNerd/mediaproxy-server".parse::<Uri>().unwrap();
+        let replaced_uri = replace_path_and_query(&original_uri, "/ThePicoNerd/mediaproxy-router".to_string()).unwrap();
+        assert_eq!(replaced_uri.path_and_query().unwrap().as_str(), "/ThePicoNerd/mediaproxy-router");
+    }
 }
