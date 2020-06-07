@@ -31,8 +31,15 @@ mod tests {
 
     #[test]
     fn test_replace_path() {
-        let original_uri = "https://github.com/ThePicoNerd/mediaproxy-server".parse::<Uri>().unwrap();
-        let replaced_uri = replace_path_and_query(&original_uri, "/ThePicoNerd/mediaproxy-router".to_string()).unwrap();
-        assert_eq!(replaced_uri.path_and_query().unwrap().as_str(), "/ThePicoNerd/mediaproxy-router");
+        let original_uri = "https://github.com/ThePicoNerd/mediaproxy-server"
+            .parse::<Uri>()
+            .unwrap();
+        let replaced_uri =
+            replace_path_and_query(&original_uri, "/ThePicoNerd/mediaproxy-router".to_string())
+                .unwrap();
+        assert_eq!(
+            replaced_uri.path_and_query().unwrap().as_str(),
+            "/ThePicoNerd/mediaproxy-router"
+        );
     }
 }
