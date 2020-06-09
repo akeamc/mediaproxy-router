@@ -38,8 +38,8 @@ mod tests {
             replace_path_and_query(&original_uri, "/ThePicoNerd/mediaproxy-router".to_string())
                 .unwrap();
         assert_eq!(
-            replaced_uri.path_and_query().unwrap().as_str(),
-            "/ThePicoNerd/mediaproxy-router"
+            replaced_uri.to_string(),
+            "https://github.com/ThePicoNerd/mediaproxy-router"
         );
     }
 }
