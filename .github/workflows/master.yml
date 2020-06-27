@@ -112,7 +112,7 @@ jobs:
         with:
           name: linux-builds
           path: ./linux
-      
+
       - name: Setting ENV's
         run: echo ::set-env name=VERSION::$(cut -d "#" -f2 <<< $(cargo pkgid))
         shell: bash
@@ -139,3 +139,34 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
           tags: "latest,v${{ env.VERSION }}"
+
+  chart:
+    name: Update chart
+    needs:
+      - upload
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          repository: ThePicoNerd/mediaproxy
+          ref: develop
+
+      - name: Install yq
+        uses: mikefarah/yq@3.3.2
+
+      - name: Setting ENV's
+        run: echo ::set-env name=VERSION::$(cut -d "#" -f2 <<< $(cargo pkgid))
+        shell: bash
+
+      - name: Bump chart
+        run: yq w values.yaml router.image.tag v${{ env.VERSION }}
+        shell: bash
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v2
+        with:
+          commit-message: update authors
+          title: Bump mediaproxy-router to ${{ env.VERSION }}
+          body: This bump is automatic.
+          labels: dependencies
+          branch: charts/mediaproxy-router-${{ env.VERSION }}
