@@ -150,6 +150,7 @@ jobs:
         with:
           repository: ThePicoNerd/mediaproxy
           ref: develop
+          token: ${{ secrets.CHART_REPO_TOKEN }}
 
       - name: Install yq
         uses: mikefarah/yq@3.3.2
