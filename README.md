@@ -26,7 +26,6 @@ A standalone binary that normalizes the incoming requests before passing them on
 | `webp` |
 | `gif`  |
 
-
 ### `GET /`
 
 #### Query string parameters
