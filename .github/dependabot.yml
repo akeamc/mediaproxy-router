@@ -1,11 +1,13 @@
-name: Master Release
-
+name: CI
 on:
   push:
     branches:
+      - "*" # matches every branch
+      - "*/*" # matches every branch containing a single '/'
+      - "!master" # excludes master
+  pull_request:
+    branches:
       - master
-    paths-ignore:
-      - "**.md"
 
 jobs:
   check:
@@ -18,6 +20,13 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -32,6 +41,13 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -63,6 +79,13 @@ jobs:
           toolchain: nightly
           override: true
       - run: rustup component add clippy
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
@@ -75,6 +98,7 @@ jobs:
       - test
       - fmt
       - clippy
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -83,11 +107,13 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-      - name: Cache cargo build
-        uses: actions/cache@v1
+      - uses: actions/cache@v2
         with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/cargo@v1
         with:
           command: build
@@ -98,6 +124,32 @@ jobs:
         with:
           name: linux-builds
           path: ./target/release/mediaproxy-router
+
+  docker:
+    name: Docker
+    needs:
+      - check
+      - test
+      - fmt
+      - clippy
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Setting ENV's
+        run: echo ::set-env name=VERSION::$(cut -d "#" -f2 <<< $(cargo pkgid))
+        shell: bash
+
+      - name: Publish to Registry
+        uses: elgohr/Publish-Docker-Github-Action@master
+        env:
+          VERSION: ${{ env.VERSION }}
+        with:
+          name: thepiconerd/mediaproxy-router
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          tags: "latest,v${{ env.VERSION }}"
 
   upload:
     name: Upload
@@ -112,7 +164,7 @@ jobs:
         with:
           name: linux-builds
           path: ./linux
-      
+
       - name: Setting ENV's
         run: echo ::set-env name=VERSION::$(cut -d "#" -f2 <<< $(cargo pkgid))
         shell: bash
@@ -129,13 +181,17 @@ jobs:
           prerelease: false
           files: |
             linux/mediaproxy-router
-
-      - name: Publish to Registry
-        uses: elgohr/Publish-Docker-Github-Action@master
-        env:
-          VERSION: ${{ env.VERSION }}
+  
+  update_chart:
+    name: Update chart
+    needs:
+      - upload
+      - docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger chart update
+        uses: peter-evans/repository-dispatch@v1
         with:
-          name: thepiconerd/mediaproxy-router
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          tags: "latest,v${{ env.VERSION }}"
+          token: ${{ secrets.MEDIAPROXY_PAT }}
+          event-type: image_pushed
+          repository: ThePicoNerd/mediaproxy
