@@ -2,9 +2,9 @@ name: Push Request Testing
 on:
   push:
     branches:
-      - '*'         # matches every branch
-      - '*/*'       # matches every branch containing a single '/'
-      - '!master'   # excludes master
+      - "*" # matches every branch
+      - "*/*" # matches every branch containing a single '/'
+      - "!master" # excludes master
   pull_request:
     branches:
       - master
