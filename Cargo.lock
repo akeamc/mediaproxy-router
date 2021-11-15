@@ -903,7 +903,7 @@ dependencies = [
 
 [[package]]
 name = "mediaproxy-router"
-version = "0.1.4"
+version = "0.2.0"
 dependencies = [
  "actix-rt",
  "actix-web",
@@ -1243,9 +1243,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.55"
+version = "1.0.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec2c5d7e739bc07a3e73381a39d61fdb5f671c60c1df26a130690665803d8226"
+checksum = "e277c495ac6cd1a01a58d0a0c574568b4d1ddf14f59965c6a58b8d96400b54f3"
 dependencies = [
  "itoa",
  "ryu",
